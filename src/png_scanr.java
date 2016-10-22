@@ -29,6 +29,7 @@ public class png_scanr extends JFrame {
 	FRAME_WIDTH = 640,
 	FRAME_HEIGHT = 480,
 	maze_zoom = 40,
+	KernalSleepTime = 10,
 	//maze_pixel_width=64,
 	//maze_pixel_height=64,
 	pdown = 3,
@@ -196,6 +197,7 @@ public class png_scanr extends JFrame {
 		// KERNAL
 		// KERNAL
 		// KERNAL
+		long completed_delay = 0;
 		maze_img = enter_maze(current_maze, mazelist, scorearray, initialarray);
 		int maze_pixel_width = maze_img.getWidth();
 		int maze_pixel_height = maze_img.getHeight();
@@ -236,9 +238,35 @@ public class png_scanr extends JFrame {
 				
 			//	graphics.drawString(String.format("Time: %l$tM:%l$tS.%l$tL", completedtime), 10, 10);
 				// Blit image and flip...
-				if(player_on_red(0, 0, maze_img, maze_pixel_width, maze_pixel_height))
+				if(player_on_red(0, 0, maze_img, maze_pixel_width, maze_pixel_height)) {
+					completed_delay = System.currentTimeMillis() + 2 * 1000;
 					maze_completed = true;
-				if(maze_completed) {
+				}
+				if(maze_completed && (System.currentTimeMillis() > completed_delay) && completed_delay > 0) {
+					completed_delay=0;
+					try {
+						sampleplayback(fanfare);
+					} catch (IOException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (UnsupportedAudioFileException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (LineUnavailableException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					} catch (InterruptedException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+					try {
+
+						Thread.sleep(2000);
+
+					} 
+					catch (InterruptedException e) {
+
+					}
 					if (check_if_highscore(completedtime, scorearray)) {
 						String initials = enter_highscores(player_spritesheet, graphics, buffer, spritesheet_player_width, spritesheet_player_height, completedtime);
 						scorearray[9] = completedtime;
@@ -262,9 +290,25 @@ public class png_scanr extends JFrame {
 					maze_x=0;
 					maze_y=0;
 					player_x = maze_zoom;   //FRAME_WIDTH/2 + 10, //this is ugly and not maintainable
-				
-							player_y = maze_zoom; //F
+					player_y = maze_zoom; //F
 				}
+				if( keyboard.keyDownOnce( KeyEvent.VK_ENTER ) ) {
+					current_maze++;
+					maze_img = enter_maze(current_maze, mazelist, scorearray, initialarray);
+					maze_x=0;
+					maze_y=0;
+					player_x = maze_zoom;   //FRAME_WIDTH/2 + 10, //this is ugly and not maintainable
+					player_y = maze_zoom; //F
+				}
+				if( keyboard.keyDownOnce( KeyEvent.VK_BACK_SPACE ) ) {
+					if(current_maze > 0) current_maze--;
+					maze_img = enter_maze(current_maze, mazelist, scorearray, initialarray);
+					maze_x=0;
+					maze_y=0;
+					player_x = maze_zoom;   //FRAME_WIDTH/2 + 10, //this is ugly and not maintainable
+					player_y = maze_zoom; //F
+				}
+
 				//graphics = buffer.getDrawGraphics();
 
 				//graphics.drawImage( bi, 0, 0, null );
@@ -284,7 +328,7 @@ public class png_scanr extends JFrame {
 
 				try {
 
-					Thread.sleep(10);
+					Thread.sleep(KernalSleepTime);
 
 				} 
 				catch (InterruptedException e) {
@@ -310,6 +354,9 @@ public class png_scanr extends JFrame {
 
 		}
 
+	}
+	public boolean switchmaze(int currentmaze) {
+		return(true);
 	}
 	//Checking if touching letters
 	public String player_touching_letter(int hs_x_offset, int hs_y_offset){
@@ -425,7 +472,7 @@ public class png_scanr extends JFrame {
 				keyboard.poll();
 				try {
 
-					Thread.sleep(10);
+					Thread.sleep(KernalSleepTime);
 
 				} 
 				catch (InterruptedException e) {
@@ -465,6 +512,25 @@ public class png_scanr extends JFrame {
 			AnimationFrame ++;
 			if(AnimationFrame >= MaxAnimationFrames)
 				AnimationFrame = 0;
+
+			if((AnimationFrame % (AnimationSpeed*2)) == 0) {
+				File footsteps = new File("footstep1.wav");
+				try {
+					sampleplayback(footsteps);
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (UnsupportedAudioFileException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (LineUnavailableException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
 		}
 		BufferedImage player_img = img.getSubimage(AnimationFrame / AnimationSpeed * 16, player_direction * 16,
 				pw,ph);
@@ -854,7 +920,7 @@ public class png_scanr extends JFrame {
 		converthighscores(gethighscoretable(mazelist.get(current_maze).toString()), scorearray, initialarray);
 		return(mazeimage);
 	}
-	public static void sampleplayback(File fileName) throws IOException, UnsupportedAudioFileException, LineUnavailableException, InterruptedException {
+	public static void sampleplayback(final File fileName) throws IOException, UnsupportedAudioFileException, LineUnavailableException, InterruptedException {
 		class AudioListener implements LineListener {
 		    private boolean done = false;
 		    @Override public synchronized void update(LineEvent event) {
@@ -868,6 +934,47 @@ public class png_scanr extends JFrame {
 		      while (!done) { wait(); }
 		    }
 		  }
+		
+		System.out.println(System.currentTimeMillis());
+		new Thread(new Runnable() {
+			
+
+			public void run() {
+				AudioListener listener = new AudioListener();
+
+				try {
+					AudioInputStream ais = AudioSystem.getAudioInputStream(fileName);
+								
+					Clip clip = AudioSystem.getClip();
+					clip.addLineListener(listener);
+					clip.open(ais);
+					clip.start();
+					listener.waitUntilDone();
+					clip.close();
+					ais.close();
+				}
+				 catch (Exception e) {
+					 
+				 }
+				}
+			}).start();
+	}
+	
+/*	
+	class AudioListener implements LineListener {
+	    private boolean done = false;
+	    @Override public synchronized void update(LineEvent event) {
+	      javax.sound.sampled.LineEvent.Type eventType = event.getType();
+	      if (eventType == javax.sound.sampled.LineEvent.Type.STOP || eventType == javax.sound.sampled.LineEvent.Type.CLOSE) {
+	        done = true;
+	        notifyAll();
+	      }
+	    }
+	    public synchronized void waitUntilDone() throws InterruptedException {
+	      while (!done) { wait(); }
+	    }
+	  }
+	
 		AudioListener listener = new AudioListener();
 		AudioInputStream ais = AudioSystem.getAudioInputStream(fileName);
 		try {
@@ -876,14 +983,16 @@ public class png_scanr extends JFrame {
 			clip.open(ais);
 			try {
 				clip.start();
-				listener.waitUntilDone();
+			//	listener.waitUntilDone();
 			} finally {
-				clip.close();
+			//	clip.close();
 			}
 		} finally {
 			ais.close();
 		}
 	}
+	*/
+	
 	public static void main( String[] args ) {
 		png_scanr app = new png_scanr();
 		app.setTitle( "Interpret PNG as scrolling maze" );
