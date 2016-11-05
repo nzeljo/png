@@ -39,7 +39,7 @@ public class png_scanr extends JFrame {
 	AnimationSpeed = 10, // Higher number = slower
 	MaxAnimationFrames = 4 * AnimationSpeed;
 	String hs_chars [] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
-						"-","!",".","\u2B05","*","?" };
+						"-","!",".","\u2B05","\u21B5","?" };
 	int hs_chars_xy [][]  = {
 			{3,1},{5,1},{7,1},{9,1},{11,1},
 			{13,3},{13,5},{13,7},{13,9},{13,11},
@@ -71,6 +71,7 @@ public class png_scanr extends JFrame {
 	int spritesheetv = 0;
 	int AnimationFrame = 0;
 	int attracths = 5000;
+	int mazecount = 0;
 	
 	KeyboardInput keyboard = new KeyboardInput(); // Keyboard polling
 	Canvas canvas; // Our drawing component
@@ -91,7 +92,7 @@ public class png_scanr extends JFrame {
 	public void run() {
 		int current_maze=0;
 		File fanfare = new File("fanfare1.wav");
-		try {
+	/*	try {
 			sampleplayback(fanfare);
 		} catch (IOException e1) {
 			// TODO Auto-generated catch block
@@ -105,10 +106,11 @@ public class png_scanr extends JFrame {
 		} catch (InterruptedException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
-		}
+		} */
 		
 		JSONArray mazelist = findmazefiles();
-		
+		mazecount = mazelist.size();
+
         // Images are located in the geek folder
         // which is located in the images folder
         // which is located in the current directory.
@@ -238,12 +240,9 @@ public class png_scanr extends JFrame {
 				
 			//	graphics.drawString(String.format("Time: %l$tM:%l$tS.%l$tL", completedtime), 10, 10);
 				// Blit image and flip...
-				if(player_on_red(0, 0, maze_img, maze_pixel_width, maze_pixel_height)) {
-					completed_delay = System.currentTimeMillis() + 2 * 1000;
+				if(player_on_red(0, 0, maze_img, maze_pixel_width, maze_pixel_height) && !maze_completed) {
+					completed_delay = System.currentTimeMillis() + 2 * 500;
 					maze_completed = true;
-				}
-				if(maze_completed && (System.currentTimeMillis() > completed_delay) && completed_delay > 0) {
-					completed_delay=0;
 					try {
 						sampleplayback(fanfare);
 					} catch (IOException e1) {
@@ -259,6 +258,11 @@ public class png_scanr extends JFrame {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
+				}
+			//	if(maze_completed) { //<- This line removes delay but freezes player
+				if(maze_completed && (System.currentTimeMillis() > completed_delay) && completed_delay > 0) { //<- This line requires you to go on red and then go off of it again
+					completed_delay=0;
+
 					try {
 
 						Thread.sleep(2000);
@@ -293,7 +297,8 @@ public class png_scanr extends JFrame {
 					player_y = maze_zoom; //F
 				}
 				if( keyboard.keyDownOnce( KeyEvent.VK_ENTER ) ) {
-					current_maze++;
+					if(current_maze < mazecount - 1) current_maze++;
+					hstime = System.currentTimeMillis();
 					maze_img = enter_maze(current_maze, mazelist, scorearray, initialarray);
 					maze_x=0;
 					maze_y=0;
@@ -302,6 +307,7 @@ public class png_scanr extends JFrame {
 				}
 				if( keyboard.keyDownOnce( KeyEvent.VK_BACK_SPACE ) ) {
 					if(current_maze > 0) current_maze--;
+					hstime = System.currentTimeMillis();
 					maze_img = enter_maze(current_maze, mazelist, scorearray, initialarray);
 					maze_x=0;
 					maze_y=0;
@@ -407,7 +413,14 @@ public class png_scanr extends JFrame {
 		String priorletter = null;
 		String hsbuf = null;
 		Font timeFont = new Font("SansSerif", Font.BOLD, 15);
-
+		String backspace_char =  "\u2B05";
+		String enter_char =  "\u21B5";
+		Color hsfontcolor = Color.white;
+		Random rnd = new Random();
+		rnd.setSeed(333);
+		long colorchangedelay = 0;
+		long colorchangerate = 50;
+		
 		// KERNAL
 		// HIGHSCORE KERNAL
 		// KERNAL
@@ -431,7 +444,7 @@ public class png_scanr extends JFrame {
 				// drawing highscore box
 				highscore_graphics.setColor(Color.black);
 				highscore_graphics.fillRect(maze_x + hsbox_x, maze_y + hsbox_y, box_width, box_height);
-				highscore_graphics.setColor(Color.green);
+				highscore_graphics.setColor(hsfontcolor);
 				if (hsbuf != null)
 					highscore_graphics.drawString(hsbuf, maze_x + hsbox_x + hs_x_offset, maze_y + hsbox_y + hs_y_offset);
 				
@@ -447,25 +460,28 @@ public class png_scanr extends JFrame {
 					buffer.show();
 
 				String letter = player_touching_letter(hs_x_offset, hs_y_offset);
-				
-				if (letter != null && !highscore_entered){
-					if (letter != priorletter){
-						fillcolor=Color.yellow;
+				if (letter != null && !highscore_entered && letter != priorletter){
+					if (!(letter != backspace_char) ) {
+						int hssize = hsbuf.length();
+						if (hssize>0) {
+							hsbuf = hsbuf.substring(0, hssize - 1);
+						}
+					}	
+					else {
 						if (hsbuf == null)
 							hsbuf = letter;
-						else
+						else if (hsbuf.length() < 3)
 							hsbuf += letter;
-						if (hsbuf.length() >= 3){
-							//
-						//	initials = hsbuf;
-							highscore_entered = true;
-							highscore_delay = System.currentTimeMillis() + highscore_enter_delay * 1000;
-						}
 					}
-					else
-						fillcolor=Color.black;
+					if(!(letter != enter_char)) {
+						highscore_entered = true;
+						highscore_delay = System.currentTimeMillis() + highscore_enter_delay * 1000;
+					}
 				}
-				
+				if(highscore_entered && System.currentTimeMillis() > colorchangedelay) {
+					colorchangedelay = System.currentTimeMillis() + colorchangerate;
+					hsfontcolor = new Color(rnd.nextInt(0xff),rnd.nextInt(0xff),rnd.nextInt(0xff));
+				}
 				priorletter = letter;
 				
 				// Poll the keyboard
@@ -935,7 +951,6 @@ public class png_scanr extends JFrame {
 		    }
 		  }
 		
-		System.out.println(System.currentTimeMillis());
 		new Thread(new Runnable() {
 			
 
