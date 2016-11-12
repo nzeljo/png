@@ -5,11 +5,9 @@ import java.awt.event.*;
 import java.awt.image.*;
 import java.util.*;
 import javax.swing.JFrame;
-import java.util.ArrayList;
-import javax.imageio.*;
-import java.applet.Applet;
-import java.awt.*;
-import java.awt.image.*;
+//import java.util.ArrayList;
+//import javax.imageio.*;
+//import java.applet.Applet;
 import java.io.*;
 import java.net.URL;
 import java.nio.file.*;
@@ -20,7 +18,7 @@ import org.json.simple.*;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
-import java.awt.geom.AffineTransform;
+//import java.awt.geom.AffineTransform;
 
 import javax.sound.sampled.*;
 
@@ -38,6 +36,18 @@ public class png_scanr extends JFrame {
 	pleft=2,
 	AnimationSpeed = 10, // Higher number = slower
 	MaxAnimationFrames = 4 * AnimationSpeed;
+	static String goalsplash = "The goal of the game is to finish the maze as fast as possible.",
+			keyssplash = "WASD or arrow keys to move\nEnter to skip forward\nBackspace to skip back",
+			creditssplash = "credits";
+	static final int
+	widthtenth = FRAME_WIDTH / 10,
+	heighttenth = FRAME_HEIGHT / 10,
+	goalsplashx = 5,
+	goalsplashy = 5,
+	creditssplashx = 1,
+	creditssplashy = 9,
+	keyssplashx = 0,
+	keyssplashy = 1;
 	String hs_chars [] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
 						"-","!",".","\u2B05","\u21B5","?" };
 	int hs_chars_xy [][]  = {
@@ -69,8 +79,9 @@ public class png_scanr extends JFrame {
 //	boolean player_moving = false;
 	int spritesheeth = 0;
 	int spritesheetv = 0;
-	int AnimationFrame = 0;
+	int AnimationFrame = -1;
 	int attracths = 5000;
+	int splashtimeonscreen = 20000;
 	int mazecount = 0;
 	
 	KeyboardInput keyboard = new KeyboardInput(); // Keyboard polling
@@ -118,9 +129,8 @@ public class png_scanr extends JFrame {
 
         
         
-		long cursorstarttime = System.currentTimeMillis();
 		long hstime = System.currentTimeMillis();
-		int cursorstatus = 0;
+		long splashtime = hstime;
 		
 		Long[] scorearray = new Long[10];
 		String[] initialarray = new String[10];
@@ -145,7 +155,6 @@ public class png_scanr extends JFrame {
 		int spritesheet_player_width = 0;
 		int spritesheet_player_height = 0;	
 		try {
-		//	URL player_url = new URL("file:/home/gianni/workspace/spritesheet6.png");
 			URL player_url = new URL("file:spritesheet6.png");
 			player_spritesheet = ImageIO.read(player_url);
 			// player_width = player_img.getWidth(null);
@@ -192,7 +201,7 @@ public class png_scanr extends JFrame {
 		//mazeSelect(mazeimages, graphics, buffer, keyboard);
 
 		
-		// KERNAL
+		// GAME KERNAL
 		// KERNAL
 		// KERNAL
 		// KERNAL
@@ -213,7 +222,8 @@ public class png_scanr extends JFrame {
 				graphics = buffer.getDrawGraphics();
 				graphics.drawImage(maze_img, maze_x, maze_y , maze_pixel_width*maze_zoom, maze_pixel_height*maze_zoom, null);
 				draw_player (player_x, player_y, player_spritesheet, graphics, spritesheet_player_width, spritesheet_player_height, maze_img, maze_pixel_width, maze_pixel_height, false);
-			
+				if(System.currentTimeMillis() - splashtime < splashtimeonscreen && AnimationFrame == -1)
+					showsplash(graphics);
 			//	if(player_moving)
 			//	AnimationFrame += 1;
 			//	if(AnimationFrame > MaxAnimationFrames)
@@ -1007,7 +1017,29 @@ public class png_scanr extends JFrame {
 		}
 	}
 	*/
+	public static void showsplash(Graphics splashgraphics) {
+		Font splashFont = new Font("SansSerif", Font.BOLD, 20);
+
+		splashgraphics.setFont(splashFont);
+		splashgraphics.setColor(Color.white);
+		splashgraphics.drawString(goalsplash, tenthx(goalsplashx), tenthy(goalsplashy));
+		multilinedrawstring(keyssplash, tenthx(keyssplashx), tenthy(keyssplashy), splashgraphics, 20);
+		splashgraphics.drawString(creditssplash, tenthx(creditssplashx), tenthy(creditssplashy));
+	}
+	public static int tenthx(int x) {
+		return(x * FRAME_WIDTH / 10);
+	}
+	public static int tenthy(int y) {
+		return(y * FRAME_HEIGHT / 10);
+	}
 	
+	public static void multilinedrawstring(String rawstring, int x, int y, Graphics screen, int fontheight) {
+		String[] splitstring = rawstring.split("\n");
+		for (int i=0; i < splitstring.length; i++) {
+			screen.drawString(splitstring[i], x, y);
+			y += fontheight;
+		}
+	}
 	public static void main( String[] args ) {
 		png_scanr app = new png_scanr();
 		app.setTitle( "Interpret PNG as scrolling maze" );
