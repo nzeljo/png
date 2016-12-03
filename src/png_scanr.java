@@ -36,15 +36,16 @@ public class png_scanr extends JFrame {
 	pleft=2,
 	AnimationSpeed = 10, // Higher number = slower
 	MaxAnimationFrames = 4 * AnimationSpeed;
-	static String goalsplash = "The goal of the game is to finish the maze as fast as possible.",
+	static String goalsplash = "Object: finish the maze as fast as possible",
 			keyssplash = "WASD or arrow keys to move\nEnter to skip forward\nBackspace to skip back",
-			creditssplash = "credits";
+			creditssplash = "Credits";
 	static final int
 	widthtenth = FRAME_WIDTH / 10,
 	heighttenth = FRAME_HEIGHT / 10,
-	goalsplashx = 5,
+	splashtextwaveheight = 10,
+	goalsplashx = 0,
 	goalsplashy = 5,
-	creditssplashx = 1,
+	creditssplashx = 0,
 	creditssplashy = 9,
 	keyssplashx = 0,
 	keyssplashy = 1;
@@ -84,7 +85,7 @@ public class png_scanr extends JFrame {
 	int splashtimeonscreen = 20000;
 	int mazecount = 0;
 	
-	KeyboardInput keyboard = new KeyboardInput(); // Keyboard polling
+	static KeyboardInput keyboard = new KeyboardInput(); // Keyboard polling
 	Canvas canvas; // Our drawing component
 
 	public png_scanr() {
@@ -146,6 +147,11 @@ public class png_scanr extends JFrame {
 		Graphics graphics = null;
 		Graphics2D g2d = null;
 		Color background = Color.BLACK;
+		// Clear the back buffer          
+		g2d = bi.createGraphics();
+		g2d.setColor( background );
+		// .....
+		splashscreen(buffer);
 		//----------------load IMAGE------------------
 
 		BufferedImage player_img = null;
@@ -180,9 +186,7 @@ public class png_scanr extends JFrame {
 			maze_img = ImageIO.read(url);
 		} catch (IOException e) {
 		}
-		// Clear the back buffer          
-		g2d = bi.createGraphics();
-		g2d.setColor( background );
+
 
 		
 		// SCALE IMAGE---------------------------------------------
@@ -222,8 +226,6 @@ public class png_scanr extends JFrame {
 				graphics = buffer.getDrawGraphics();
 				graphics.drawImage(maze_img, maze_x, maze_y , maze_pixel_width*maze_zoom, maze_pixel_height*maze_zoom, null);
 				draw_player (player_x, player_y, player_spritesheet, graphics, spritesheet_player_width, spritesheet_player_height, maze_img, maze_pixel_width, maze_pixel_height, false);
-				if(System.currentTimeMillis() - splashtime < splashtimeonscreen && AnimationFrame == -1)
-					showsplash(graphics);
 			//	if(player_moving)
 			//	AnimationFrame += 1;
 			//	if(AnimationFrame > MaxAnimationFrames)
@@ -468,10 +470,11 @@ public class png_scanr extends JFrame {
 				if( !buffer.contentsLost() )
 
 					buffer.show();
+				
 
 				String letter = player_touching_letter(hs_x_offset, hs_y_offset);
 				if (letter != null && !highscore_entered && letter != priorletter){
-					if (!(letter != backspace_char) ) {
+					if (letter == backspace_char)  {
 						int hssize = hsbuf.length();
 						if (hssize>0) {
 							hsbuf = hsbuf.substring(0, hssize - 1);
@@ -480,10 +483,10 @@ public class png_scanr extends JFrame {
 					else {
 						if (hsbuf == null)
 							hsbuf = letter;
-						else if (hsbuf.length() < 3)
+						else if (hsbuf.length() < 3 && letter != enter_char)
 							hsbuf += letter;
 					}
-					if(!(letter != enter_char)) {
+					if(letter == enter_char) {
 						highscore_entered = true;
 						highscore_delay = System.currentTimeMillis() + highscore_enter_delay * 1000;
 					}
@@ -1017,14 +1020,14 @@ public class png_scanr extends JFrame {
 		}
 	}
 	*/
-	public static void showsplash(Graphics splashgraphics) {
+	public static void splashtext(Graphics splashgraphics, double yoffset) {
 		Font splashFont = new Font("SansSerif", Font.BOLD, 20);
 
 		splashgraphics.setFont(splashFont);
 		splashgraphics.setColor(Color.white);
-		splashgraphics.drawString(goalsplash, tenthx(goalsplashx), tenthy(goalsplashy));
-		multilinedrawstring(keyssplash, tenthx(keyssplashx), tenthy(keyssplashy), splashgraphics, 20);
-		splashgraphics.drawString(creditssplash, tenthx(creditssplashx), tenthy(creditssplashy));
+		splashgraphics.drawString(goalsplash, tenthx(goalsplashx), (int) (tenthy(goalsplashy) + yoffset));
+		multilinedrawstring(keyssplash, tenthx(keyssplashx), (int) (tenthy(keyssplashy) + yoffset), splashgraphics, 20);
+		splashgraphics.drawString(creditssplash, tenthx(creditssplashx), (int) (tenthy(creditssplashy) + yoffset));
 	}
 	public static int tenthx(int x) {
 		return(x * FRAME_WIDTH / 10);
@@ -1038,6 +1041,34 @@ public class png_scanr extends JFrame {
 		for (int i=0; i < splitstring.length; i++) {
 			screen.drawString(splitstring[i], x, y);
 			y += fontheight;
+		}
+	}
+	public static void splashscreen(BufferStrategy buffer) {
+		double yoffset = 0;
+		double waveangle = 0;
+		double wavespeed = 0.05;
+		BufferedImage splashimage = null;
+		try {	
+			splashimage = ImageIO.read(new File("splash2.png"));	       
+		} catch (IOException e) {
+		}
+		Graphics graphics = buffer.getDrawGraphics();
+		while(!keyboard.poll()) {
+
+			graphics.drawImage(splashimage, 0, 0 , FRAME_WIDTH, FRAME_HEIGHT, null);
+			yoffset = Math.sin(waveangle) * splashtextwaveheight;
+			waveangle += wavespeed;
+			splashtext(graphics, yoffset);
+			if( !buffer.contentsLost() )
+				buffer.show();
+			try {
+
+				Thread.sleep(KernalSleepTime);
+
+			} 
+			catch (InterruptedException e) {
+
+			}
 		}
 	}
 	public static void main( String[] args ) {

@@ -51,9 +51,9 @@ public class KeyboardInput implements KeyListener {
   }
 
         
-
-  public synchronized void poll() {
-
+// was synchronized
+  public boolean poll() {
+	  boolean anykeyspressed = false;
     for( int i = 0; i < KEY_COUNT; ++i ) {
 
       // Set the key state 
@@ -70,9 +70,11 @@ public class KeyboardInput implements KeyListener {
 
           keys[ i ] = KeyState.ONCE;
 
-        else
+        else {
 
           keys[ i ] = KeyState.PRESSED;
+          anykeyspressed = true;
+        }
 
       } else {
 
@@ -81,7 +83,7 @@ public class KeyboardInput implements KeyListener {
       }
 
     }
-
+    return(anykeyspressed);
   }
 
         
