@@ -104,31 +104,11 @@ public class png_scanr extends JFrame {
 	public void run() {
 		int current_maze=0;
 		File fanfare = new File("fanfare1.wav");
-	/*	try {
-			sampleplayback(fanfare);
-		} catch (IOException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (UnsupportedAudioFileException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (LineUnavailableException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} catch (InterruptedException e1) {
-			// TODO Auto-generated catch block
-			e1.printStackTrace();
-		} */
 		
 		JSONArray mazelist = findmazefiles();
 		mazecount = mazelist.size();
 
-        // Images are located in the geek folder
-        // which is located in the images folder
-        // which is located in the current directory.
-
-
-        
+                
         
 		long hstime = System.currentTimeMillis();
 		long splashtime = hstime;
@@ -137,7 +117,7 @@ public class png_scanr extends JFrame {
 		String[] initialarray = new String[10];
 
 		
-		System.out.println("CreateBuffers"); //debug only
+		//System.out.println("CreateBuffers"); //debug only
 		canvas.createBufferStrategy( 2 );
 		BufferStrategy buffer = canvas.getBufferStrategy();
 		GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
@@ -216,7 +196,8 @@ public class png_scanr extends JFrame {
 		maze_img = enter_maze(current_maze, mazelist, scorearray, initialarray);
 		int maze_pixel_width = maze_img.getWidth();
 		int maze_pixel_height = maze_img.getHeight();
-		
+		//displayMazeThumbs(0, mazelist, buffer, mazecount);
+		mazeSelect(mazelist, buffer, keyboard, mazecount);
 		while( true ) 
 		{
 	
@@ -244,7 +225,6 @@ public class png_scanr extends JFrame {
 				graphics.fillRect(5, 20, 185, 25);
 				graphics.setColor(Color.black);
 				graphics.drawString(String.format("Time: %d.%02d", completedtime / 1000, completedtime % 1000), 10, 40);
-				//displayMazeThumbs(0,mazeimages, graphics);
 				int hsx = 430;
 				int hsy = 30;
 				if(System.currentTimeMillis() - hstime < attracths)
@@ -880,32 +860,54 @@ public class png_scanr extends JFrame {
 		return(mazelist);
 	}
 	
-	public static void displayMazeThumbs( int x,BufferedImage[] mazeimages, Graphics graphics) {
+	public static void displayMazeThumbs(int topmaze, JSONArray mazelist, Graphics graphics, int mazecount) {
+		Font splashFont = new Font("SansSerif", Font.BOLD, 20);
+
+		graphics.setFont(splashFont);
+		graphics.setColor(Color.white);
+		BufferedImage mazeimage = null;
+		int y = 0;
 		
-		for(int index=x; index < mazeimages.length; index++) {
-			x = index * 64;
-		
-			graphics.drawImage(mazeimages[index], x, 0, 64, 64, null);
+		while(y < FRAME_HEIGHT && topmaze < mazecount) {
+			try {	
+				//System.out.println(mazelist.get(topmaze).toString());
+				mazeimage = ImageIO.read(new File(mazelist.get(topmaze).toString()));	       
+			} catch (IOException e) {
+			}
+
+
+			graphics.drawString("SPECTER", 64, y);
+			graphics.drawImage(mazeimage, 0, y, 64, 64, null);
+			y += 64;
+			topmaze ++;
 		}
 	}
 	
 	
-	public static int mazeSelect(BufferedImage[] mazeimages, Graphics graphics, BufferStrategy buffer, KeyboardInput keyboard) {
+	public static int mazeSelect(JSONArray mazelist, BufferStrategy buffer, KeyboardInput keyboard, int mazecount) {
 		int listlocation = 0;
-		while(!keyboard.keyDownOnce( KeyEvent.VK_ENTER ) || keyboard.keyDownOnce( KeyEvent.VK_ESCAPE ))
+		keyboard.poll();
+		while(!(keyboard.keyDown( KeyEvent.VK_ENTER ) || keyboard.keyDown( KeyEvent.VK_ESCAPE )))
 		{
-			displayMazeThumbs(listlocation,mazeimages, graphics);
+			Graphics graphics = buffer.getDrawGraphics();
+
+			graphics.setColor(Color.BLACK);
+			graphics.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
+			displayMazeThumbs(listlocation, mazelist, graphics, mazecount);
 			
-			highlightmaze(listlocation);
+			//highlightmaze(listlocation);
 			
 			buffer.show();
-			if(( keyboard.keyDownOnce( KeyEvent.VK_A ) || keyboard.keyDown( KeyEvent.VK_LEFT )))
+			while(!keyboard.poll()) {
+				
+			}
+			if(( keyboard.keyDown( KeyEvent.VK_A ) || keyboard.keyDown( KeyEvent.VK_LEFT )) && listlocation > 0)
 				listlocation--;
-			if(( keyboard.keyDownOnce( KeyEvent.VK_D ) || keyboard.keyDown( KeyEvent.VK_RIGHT )))
+			if(( keyboard.keyDown( KeyEvent.VK_D ) || keyboard.keyDown( KeyEvent.VK_RIGHT )) && listlocation < mazecount -1)
 				listlocation++;
-			System.out.println(listlocation);
+			//System.out.println(listlocation);
 		}
-		
+		System.out.println("exited mazeselect");
 		return(listlocation);
 	}
 	
@@ -1048,14 +1050,20 @@ public class png_scanr extends JFrame {
 		double waveangle = 0;
 		double wavespeed = 0.05;
 		BufferedImage splashimage = null;
+		BufferedImage titleimage = null;
 		try {	
 			splashimage = ImageIO.read(new File("splash2.png"));	       
+		} catch (IOException e) {
+		}
+		try {	
+			titleimage = ImageIO.read(new File("gametitle.png"));	       
 		} catch (IOException e) {
 		}
 		Graphics graphics = buffer.getDrawGraphics();
 		while(!keyboard.poll()) {
 
-			graphics.drawImage(splashimage, 0, 0 , FRAME_WIDTH, FRAME_HEIGHT, null);
+			graphics.drawImage(splashimage, 0, 0, FRAME_WIDTH, FRAME_HEIGHT, null);
+			graphics.drawImage(titleimage, FRAME_WIDTH / 2 - titleimage.getWidth() / 2, FRAME_HEIGHT / 4, null);
 			yoffset = Math.sin(waveangle) * splashtextwaveheight;
 			waveangle += wavespeed;
 			splashtext(graphics, yoffset);
@@ -1073,7 +1081,7 @@ public class png_scanr extends JFrame {
 	}
 	public static void main( String[] args ) {
 		png_scanr app = new png_scanr();
-		app.setTitle( "Interpret PNG as scrolling maze" );
+		app.setTitle( "Maze Rush!" );
 		app.setVisible( true );
 		app.run();
 		System.exit( 0 );
