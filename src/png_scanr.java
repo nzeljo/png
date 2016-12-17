@@ -48,7 +48,9 @@ public class png_scanr extends JFrame {
 	creditssplashx = 0,
 	creditssplashy = 9,
 	keyssplashx = 0,
-	keyssplashy = 1;
+	keyssplashy = 1,
+	spritesheeth = 4,
+	spritesheetv = 4;
 	String hs_chars [] = {"A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z",
 						"-","!",".","\u2B05","\u21B5","?" };
 	int hs_chars_xy [][]  = {
@@ -78,8 +80,6 @@ public class png_scanr extends JFrame {
 	long completedtime = 0;
 	boolean maze_completed = false;
 //	boolean player_moving = false;
-	int spritesheeth = 0;
-	int spritesheetv = 0;
 	int AnimationFrame = -1;
 	int attracths = 5000;
 	int splashtimeonscreen = 20000;
@@ -99,9 +99,28 @@ public class png_scanr extends JFrame {
 	// Hookup keyboard polling
 		addKeyListener( keyboard );
 		canvas.addKeyListener( keyboard );
-		
+;
+
 	}
+	class Player {
+		BufferedImage spritesheet;
+		int
+		player_x = maze_zoom,   //FRAME_WIDTH/2 + 10, //this is ugly and not maintainable
+		player_dx = maze_zoom /8,
+		player_y = maze_zoom, //FRAME_HEIGHT/2,
+		player_dy = player_dx,
+		player_direction = 0;
+		int player_width = 0;
+		int player_height = 0;
+		int player_center_w = 0;
+		int player_center_h = 0;
+		int AnimationFrame = -1;
+	}
+	
 	public void run() {
+		
+		Player player = new Player();
+		
 		int current_maze=0;
 		File fanfare = new File("fanfare1.wav");
 		
@@ -136,8 +155,6 @@ public class png_scanr extends JFrame {
 
 		BufferedImage player_img = null;
 		BufferedImage player_spritesheet = null;
-		spritesheeth = 4;
-		spritesheetv = 4;
 		int spritesheet_player_width = 0;
 		int spritesheet_player_height = 0;	
 		try {
@@ -192,12 +209,17 @@ public class png_scanr extends JFrame {
 		// KERNAL
 		// KERNAL
 		// KERNAL
+		player.spritesheet = player_spritesheet;
+		player.player_width = spritesheet_player_width * 2;
+		player.player_height = spritesheet_player_height * 2;
+		player.player_center_w = player_width /2;
+		player.player_center_h = player_height /2;
+		current_maze = mazeSelect(mazelist, buffer, keyboard, mazecount, player);
 		long completed_delay = 0;
 		maze_img = enter_maze(current_maze, mazelist, scorearray, initialarray);
 		int maze_pixel_width = maze_img.getWidth();
 		int maze_pixel_height = maze_img.getHeight();
-		//displayMazeThumbs(0, mazelist, buffer, mazecount);
-		mazeSelect(mazelist, buffer, keyboard, mazecount);
+
 		while( true ) 
 		{
 	
@@ -225,10 +247,6 @@ public class png_scanr extends JFrame {
 				graphics.fillRect(5, 20, 185, 25);
 				graphics.setColor(Color.black);
 				graphics.drawString(String.format("Time: %d.%02d", completedtime / 1000, completedtime % 1000), 10, 40);
-				int hsx = 430;
-				int hsy = 30;
-				if(System.currentTimeMillis() - hstime < attracths)
-					displayhighscores(scorearray, initialarray, graphics, hsx, hsy);
 				
 			//	graphics.drawString(String.format("Time: %l$tM:%l$tS.%l$tL", completedtime), 10, 10);
 				// Blit image and flip...
@@ -860,14 +878,20 @@ public class png_scanr extends JFrame {
 		return(mazelist);
 	}
 	
-	public static void displayMazeThumbs(int topmaze, JSONArray mazelist, Graphics graphics, int mazecount) {
+	public static void displayMazeThumbs(int topmaze, JSONArray mazelist, Graphics graphics, int mazecount, Player player) {
 		Font splashFont = new Font("SansSerif", Font.BOLD, 20);
-
+		int thumbnailzoom = 8;
+		int thumbnailheight = 12;
+		int thumbnailwidth = 16;
+		player.player_direction = pleft;
+		player.player_x = thumbnailwidth * thumbnailzoom;
+		int spritesheet_player_width = player.spritesheet.getWidth(null) / spritesheeth;
+		int spritesheet_player_height = player.spritesheet.getHeight(null) / spritesheetv;
 		graphics.setFont(splashFont);
 		graphics.setColor(Color.white);
 		BufferedImage mazeimage = null;
 		int y = 0;
-		
+		BufferedImage player_img = null;
 		while(y < FRAME_HEIGHT && topmaze < mazecount) {
 			try {	
 				//System.out.println(mazelist.get(topmaze).toString());
@@ -875,29 +899,40 @@ public class png_scanr extends JFrame {
 			} catch (IOException e) {
 			}
 
-
-			graphics.drawString("SPECTER", 64, y);
-			graphics.drawImage(mazeimage, 0, y, 64, 64, null);
-			y += 64;
+			player_img = player.spritesheet.getSubimage(player.AnimationFrame / AnimationSpeed * 16, player.player_direction * 16, spritesheet_player_width, spritesheet_player_height);
+			graphics.drawString(mazelist.get(topmaze).toString(), thumbnailwidth * thumbnailzoom + player.player_width, y + mazeimage.getHeight() / 2);
+			graphics.drawImage(mazeimage.getSubimage(mazeimage.getWidth() / 2, mazeimage.getHeight() / 2, thumbnailwidth, thumbnailheight), 0, y, thumbnailwidth * thumbnailzoom, thumbnailheight * thumbnailzoom, null);
+			graphics.drawImage(player_img, player.player_x, player.player_y, player.player_width, player.player_height, null);
+			y += 16*8;
 			topmaze ++;
 		}
 	}
 	
 	
-	public static int mazeSelect(JSONArray mazelist, BufferStrategy buffer, KeyboardInput keyboard, int mazecount) {
+	public static int mazeSelect(JSONArray mazelist, BufferStrategy buffer, KeyboardInput keyboard, int mazecount, Player player) {
 		int listlocation = 0;
 		keyboard.poll();
+		player.AnimationFrame = 0;
+		player.player_direction = 0;
+		player.player_x = 0;
+		player.player_y = 0;		
+		Long[] scorearray = new Long[10];
+		String[] initialarray = new String[10];
 		while(!(keyboard.keyDown( KeyEvent.VK_ENTER ) || keyboard.keyDown( KeyEvent.VK_ESCAPE )))
 		{
 			Graphics graphics = buffer.getDrawGraphics();
 
 			graphics.setColor(Color.BLACK);
 			graphics.fillRect(0, 0, FRAME_WIDTH, FRAME_HEIGHT);
-			displayMazeThumbs(listlocation, mazelist, graphics, mazecount);
-			
+			displayMazeThumbs(listlocation, mazelist, graphics, mazecount, player);
+			converthighscores(gethighscoretable(mazelist.get(listlocation).toString()), scorearray, initialarray);
+			displayhighscores(scorearray, initialarray, graphics, FRAME_WIDTH * 3/5, 0);
 			//highlightmaze(listlocation);
 			
 			buffer.show();
+			while(keyboard.poll()) {
+				
+			}
 			while(!keyboard.poll()) {
 				
 			}
